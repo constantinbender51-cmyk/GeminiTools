@@ -43,7 +43,7 @@ const tools = Object.entries(registry).map(([name, fn]) => ({
       await chat.sendMessage([{
         functionResponse: { name: call.name, response: { result } }
       }]);
-      await setTimeout(1000);
+      await setTimeout(5000);
     }
   }
 })();
