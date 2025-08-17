@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { setTimeout } from 'timers/promises';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
@@ -42,6 +43,7 @@ const tools = Object.entries(registry).map(([name, fn]) => ({
       await chat.sendMessage([{
         functionResponse: { name: call.name, response: { result } }
       }]);
+      await setTimeout(1000);
     }
   }
 })();
