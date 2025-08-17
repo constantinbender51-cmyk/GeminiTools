@@ -52,7 +52,7 @@ Use perceive(), feel(), remember(), and sendNote() as needed to 1) survive, 2) l
       case 'sendNote':out = await sendNote(call.args); break;
     }
     // optional echo
-    await chat.sendMessage({ functionResponse: { name: call.name, response: { out } } });
+    await chat.sendMessage([{ functionResponse: { name: call.name, response: { out } } }]);
   }
 
   // persist brain
