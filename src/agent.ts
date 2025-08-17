@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { FunctionDeclaration } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
@@ -38,11 +39,16 @@ function act(action: 'idle' | 'seek_heat' | 'seek_cool' | 'recharge') {
 }
 
 // ---------- TOOL DEFINITIONS ----------
-const tools = [
+
+const tools: FunctionDeclaration[] = [
   {
     name: 'perceive',
     description: 'Read current sensor values (energy, temp).',
-    parameters: { type: 'object', properties: {} }
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
   },
   {
     name: 'act',
