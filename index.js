@@ -19,10 +19,7 @@ const tools = [
     }
   }
 ];
-// ---------- handler ----------
-async function getTime() {
-  return new Date().toISOString();
-}
+
 
 
 async function sendNote(text) {
