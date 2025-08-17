@@ -30,5 +30,8 @@ async function sendNote(text) {
   });
 
   const call = result.response.functionCalls()?.[0];
-  if (call?.name === 'sendNote') await sendNote(call.args.text);
+switch (call?.name) {
+  case 'getTime':  await getTime(); break;
+  case 'sendNote': await sendNote(call.args.text); break;
+}
 })();
