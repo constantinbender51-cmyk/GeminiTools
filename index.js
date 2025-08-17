@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
@@ -7,14 +7,14 @@ const tools = [
   {
     name: 'getTime',
     description: 'Return current UTC time as ISO string',
-    parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
+    parameters: { type: 'object', properties: {}, required: [] }
   },
   {
     name: 'sendNote',
-    description: 'Push a short message to the user via ntfy.sh',
+    description: 'Push a short message via ntfy.sh',
     parameters: {
-      type: SchemaType.OBJECT,
-      properties: { text: { type: SchemaType.STRING } },
+      type: 'object',
+      properties: { text: { type: 'string' } },
       required: ['text']
     }
   }
