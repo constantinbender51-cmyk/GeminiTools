@@ -32,6 +32,7 @@ const tools = Object.entries(registry).map(([name, fn]) => ({
 
   while (true) {
     const res = await chat.sendMessage(prompt);
+    await setTimeout(5000);
 
     const calls = res.response.functionCalls() ?? [];
     if (calls.length === 0) break;
