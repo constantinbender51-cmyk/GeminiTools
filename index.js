@@ -38,8 +38,8 @@ async function sendNote(text) {
 (async () => {
   console.log('🟢 starting');
   const prompt =
-  'Use getTime() to fetch the current UTC time as a string. ' +
-  'Then immediately call sendNote() with that exact string as the "text" parameter.';
+  'Use getTime() to fetch the current UTC time as a plain string. ' +
+  'Then call sendNote() with that exact string (no JSON, no quotes, just the ISO text).';
 
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
