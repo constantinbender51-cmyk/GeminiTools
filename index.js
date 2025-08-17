@@ -23,7 +23,7 @@ async function sendNote(text) {
 }
 
 (async () => {
-  const prompt = 'Decide what short note you want to send yourself and use sendNote().';
+  const prompt = 'Check the time and decide what short note you want to send yourself and use sendNote().';
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     tools: [{ functionDeclarations: tools }]
