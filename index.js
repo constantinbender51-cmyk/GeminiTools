@@ -53,18 +53,32 @@ async function sendNote(text) {
 
   for (const call of result.response.functionCalls() ?? []) {
   // 1. Run the tool
-let res = '';
+// 1. run the tool
+let toolResult = '';
 switch (call.name) {
-  case 'getTime': res = await getTime(); break;
-  case 'sendNote': res = await sendNote(call.args.text); break;
+  case 'getTime': toolResult = await getTime(); break;
+  case 'sendNote': toolResult = await sendNote(call.args.text); break;
 }
 
-// 2. Hand the result back to Gemini
-await chat.sendMessage({
-  role: 'function',
-  name: call.name,
-  parts: [{ text: res }]
-});
+// 2. build the full conversation stack
+const contents = [
+  { role: 'user', parts: [{ text: prompt }] },
+  { role: 'model', parts: result.response.candidates[0].content.parts },
+  {
+    role: 'user',
+    parts: [{
+      functionResponse: {
+        name: call.name,
+        response: { result: toolResult }
+      }
+    }]
+  }
+];
+
+// 3. get final answer
+const final = await model.generateContent({ model: 'gemini-2.5-flash', contents });
+console.log('Gemini final:', final.response.text());
+
 }
 
 })();
