@@ -52,24 +52,19 @@ async function sendNote(text) {
   console.log('🔧 calls found:', calls.length);
 
   for (const call of result.response.functionCalls() ?? []) {
-  let res = '';
-  switch (call.name) {
-    case 'getTime':
-      res = await getTime();
-      break;
-    case 'sendNote':
-      await sendNote(call.args.text);
-      break;
-  }
+  // 1. Run the tool
+let res = '';
+switch (call.name) {
+  case 'getTime': res = await getTime(); break;
+  case 'sendNote': res = await sendNote(call.args.text); break;
+}
 
-  // 👇 feed the value back to Gemini
-  await model.generateContent({
-    contents: [{
-      role: 'function',
-      name: call.name,
-      parts: [{ text: res }]
-    }]
-  });
+// 2. Hand the result back to Gemini
+await chat.sendMessage({
+  role: 'function',
+  name: call.name,
+  parts: [{ text: res }]
+});
 }
 
 })();
