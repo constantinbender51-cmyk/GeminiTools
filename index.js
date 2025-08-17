@@ -36,9 +36,10 @@ async function sendNote(text) {
         await getTime();  // we ignore the return here; Gemini already has it
         break;
       case 'sendNote':
-        await sendNote(call.args.text);
-        console.log('sent', call.args.text);
-        break;
+  console.log('Gemini wants to send:', JSON.stringify(call.args));
+  await sendNote(call.args.text);
+  break;
+
     }
   }
 })();
