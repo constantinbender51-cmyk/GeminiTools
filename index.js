@@ -38,8 +38,8 @@ async function sendNote(text) {
 (async () => {
   console.log('🟢 starting');
   const prompt =
-  'First call getTime() exactly once and store the result in a variable called now. ' +
-  'Then call sendNote(now) to push that exact string to the user.';
+  'Use getTime() to fetch the current UTC time as a string. ' +
+  'Then immediately call sendNote() with that exact string as the "text" parameter.';
 
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
