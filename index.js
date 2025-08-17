@@ -1,39 +1,47 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-const tools = [
-  {
-    name: 'getTime',
-    description: 'Return current UTC time as ISO string',
-    parameters: { type: 'object', properties: {}, required: [] }
-  },
-  {
-    name: 'sendNote',
-    description: 'Push a message via ntfy.sh',
-    parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] }
+// ---------- registry ----------
+const registry = {
+  getTime:  async () => new Date().toISOString(),
+  sendNote: async (text) => {
+    await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC}`, {
+      method: 'POST',
+      headers: { Title: 'Gemini' },
+      body: text
+    });
+    return 'sent';
   }
-];
+};
 
-async function getTime() { return new Date().toISOString(); }
-async function sendNote(text) {
-  await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC}`, { method: 'POST', headers: { Title: 'Gemini' }, body: text });
-}
+// ---------- auto-build tool definitions ----------
+const tools = Object.entries(registry).map(([name, fn]) => ({
+  name,
+  description: fn.description || name,
+  parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
+}));
 
+// ---------- run ----------
 (async () => {
   const chat = model.startChat({ tools: [{ functionDeclarations: tools }] });
 
-  // Turn 1: ask Gemini to call getTime
-  const res1 = await chat.sendMessage('Please call getTime().');
-  const call1 = res1.response.functionCalls()?.[0];
-  if (!call1) return;
+  let prompt = 'Use any tools you need to accomplish the goal: tell me the exact UTC time.';
 
-  const time = await getTime();
-  await chat.sendMessage([{ functionResponse: { name: 'getTime', response: { time } } }]);
+  while (true) {
+    const res = await chat.sendMessage(prompt);
 
-  // Turn 2: now ask Gemini to send the time
-  const res2 = await chat.sendMessage('Now call sendNote() with the exact time string.');
-  const call2 = res2.response.functionCalls()?.[0];
-  if (call2?.name === 'sendNote') await sendNote(call2.args.text);
+    const calls = res.response.functionCalls() ?? [];
+    if (calls.length === 0) break;
+
+    for (const call of calls) {
+      if (!registry[call.name]) continue;
+
+      const result = await registry[call.name](...Object.values(call.args));
+      await chat.sendMessage([{
+        functionResponse: { name: call.name, response: { result } }
+      }]);
+    }
+  }
 })();
