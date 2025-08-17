@@ -1,50 +1,46 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
-import { setTimeout } from 'timers/promises';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-// ---------- registry ----------
+const tools = [
+  {
+    name: 'getTime',
+    description: 'Return current UTC time as ISO string',
+    parameters: { type: 'object', properties: {}, required: [] }
+  },
+  {
+    name: 'sendNote',
+    description: 'Push a message via ntfy.sh',
+    parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] }
+  }
+];
+
 const registry = {
-  getTime:  async () => new Date().toISOString(),
+  getTime: () => new Date().toISOString(),
   sendNote: async (text) => {
     await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC}`, {
       method: 'POST',
       headers: { Title: 'Gemini' },
       body: text
     });
-    return 'sent';
   }
 };
 
-// ---------- auto-build tool definitions ----------
-const tools = Object.entries(registry).map(([name, fn]) => ({
-  name,
-  description: fn.description || name,
-  parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
-}));
-
-// ---------- run ----------
 (async () => {
+  const prompt =
+    'Use getTime() once and then immediately use sendNote() with the exact string returned.';
+
   const chat = model.startChat({ tools: [{ functionDeclarations: tools }] });
+  const res = await chat.sendMessage(prompt);
 
-  let prompt = 'Use any tools you need to accomplish the goal: tell me the exact UTC time.';
-
-  while (true) {
-    const res = await chat.sendMessage(prompt);
-    await setTimeout(5000);
-
-    const calls = res.response.functionCalls() ?? [];
-    if (calls.length === 0) break;
-
-    for (const call of calls) {
-      if (!registry[call.name]) continue;
-
+  for (const call of res.response.functionCalls() ?? []) {
+    if (registry[call.name]) {
       const result = await registry[call.name](...Object.values(call.args));
-      await chat.sendMessage([{
-        functionResponse: { name: call.name, response: { result } }
-      }]);
-      await setTimeout(5000);
+      if (call.name === 'getTime') {
+        // immediately send the result
+        await registry.sendNote(result);
+      }
     }
   }
 })();
