@@ -87,7 +87,7 @@ ${JSON.stringify(state, null, 2)}
 Use perceive() to check sensors, then act() once, then notify() a short sentence describing what you did and why.
 `;
 
-    const chat = model.startChat({ tools });
+    const chat = model.startChat({ tools: { functionDeclarations: tools } });
     const result = await chat.sendMessage(prompt);
 
     // Gemini may return multiple function calls
