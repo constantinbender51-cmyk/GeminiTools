@@ -23,7 +23,9 @@ async function sendNote(text) {
 }
 
 (async () => {
-  const prompt = 'Check the time and decide what short note you want to send yourself and use sendNote().';
+  const prompt =
+  'Use getTime() to fetch the current UTC time, then use sendNote() to send the exact time string to the user.';
+
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     tools: [{ functionDeclarations: tools }]
