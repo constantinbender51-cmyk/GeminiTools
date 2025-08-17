@@ -1,58 +1,36 @@
-import 'dotenv/config';
-import express from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
-const app = express();
-const port = process.env.PORT || 3000;
-app.use(express.json());
-
-// 1️⃣  Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-// 2️⃣  Notify via ntfy
-async function notify(message) {
-  const topic = process.env.NTFY_TOPIC;  // set in Railway vars
-  try {
-    await fetch(`https://ntfy.sh/${topic}`, {
-      method: 'POST',
-      headers: { 'Title': 'Gemini Secretary' },
-      body: message
-    });
-  } catch (e) {
-    console.error('ntfy error:', e);
+const tools = [{
+  name: 'sendNote',
+  description: 'Push a short message to the user via ntfy.sh',
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: { text: { type: SchemaType.STRING } },
+    required: ['text']
   }
+}];
+
+async function sendNote(text) {
+  await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC}`, {
+    method: 'POST',
+    headers: { Title: 'Gemini says' },
+    body: text
+  });
+  return 'sent';
 }
 
-// 3️⃣  One-time hard-coded test when the app boots
 (async () => {
-  try {
-    const prompt = 'Summarize today’s weather in one sentence.';
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    console.log('Gemini says:', text);
-    await notify(text);
-  } catch (e) {
-    console.error('Startup test failed:', e);
+  const prompt = 'Decide what short note you want to send yourself and use sendNote().';
+  const chat = model.startChat({ tools: [{ functionDeclarations: tools }] });
+  const result = await chat.sendMessage(prompt);
+
+  for (const call of result.response.functionCalls() ?? []) {
+    if (call.name === 'sendNote') {
+      await sendNote(call.args.text);
+      console.log('Gemini pushed:', call.args.text);
+    }
   }
 })();
-
-// 4️⃣  Optional: still expose POST /ask for future use
-app.post('/ask', async (req, res) => {
-  const { prompt } = req.body;
-  if (!prompt) return res.status(400).send('Missing prompt');
-  try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    await notify(text);
-    res.json({ answer: text });
-  } catch (e) {
-    console.error(e);
-    res.status(500).send('Gemini error');
-  }
-});
-
-// Health check
-app.get('/', (_req, res) => res.send('Gemini Secretary running 🚂'));
-
-app.listen(port, () => console.log(`Listening on ${port}`));
