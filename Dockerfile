@@ -1,7 +1,8 @@
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev
+# Install without needing package-lock.json
+RUN npm install --production
 COPY . .
 RUN npm run build
 CMD ["node", "dist/agent.js"]
