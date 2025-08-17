@@ -51,17 +51,25 @@ async function sendNote(text) {
   const calls = result.response.functionCalls?.() ?? [];
   console.log('🔧 calls found:', calls.length);
 
-  for (const call of calls) {
-    console.log('→ executing', call.name, call.args);
-    switch (call.name) {
-      case 'getTime':
-        const t = await getTime();
-        console.log('⏰ time', t);
-        break;
-      case 'sendNote':
-        await sendNote(call.args.text);
-        console.log('📤 sent', call.args.text);
-        break;
-    }
+  for (const call of result.response.functionCalls() ?? []) {
+  let res = '';
+  switch (call.name) {
+    case 'getTime':
+      res = await getTime();
+      break;
+    case 'sendNote':
+      await sendNote(call.args.text);
+      break;
   }
+
+  // 👇 feed the value back to Gemini
+  await model.generateContent({
+    contents: [{
+      role: 'function',
+      name: call.name,
+      parts: [{ text: res }]
+    }]
+  });
+}
+
 })();
