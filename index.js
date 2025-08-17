@@ -23,17 +23,31 @@ async function sendNote(text) {
 }
 
 (async () => {
+  console.log('🟢 starting');
   const prompt =
-  'Use getTime() to fetch the current UTC time, then use sendNote() to send the exact time string to the user.';
+    'Use getTime() to fetch the current UTC time, then use sendNote() to send that exact time string.';
 
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     tools: [{ functionDeclarations: tools }]
   });
 
-  const call = result.response.functionCalls()?.[0];
-switch (call?.name) {
-  case 'getTime':  await getTime(); break;
-  case 'sendNote': await sendNote(call.args.text); break;
-}
+  console.log('📦 Gemini raw response:', JSON.stringify(result.response, null, 2));
+
+  const calls = result.response.functionCalls?.() ?? [];
+  console.log('🔧 calls found:', calls.length);
+
+  for (const call of calls) {
+    console.log('→ executing', call.name, call.args);
+    switch (call.name) {
+      case 'getTime':
+        const t = await getTime();
+        console.log('⏰ time', t);
+        break;
+      case 'sendNote':
+        await sendNote(call.args.text);
+        console.log('📤 sent', call.args.text);
+        break;
+    }
+  }
 })();
