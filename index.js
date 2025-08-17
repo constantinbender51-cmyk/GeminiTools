@@ -54,6 +54,12 @@ async function sendNote(text) {
       case 'sendNote': res = await sendNote(call.args.text); break;
     }
     // Optional: feed result back
-    await chat.sendMessage([{ functionResponse: { name: call.name, response: res } }]);
+    await chat.sendMessage({
+  functionResponse: {
+    name: call.name,
+    response: { result: call.name === 'sendNote' ? res : JSON.parse(res) }
+  }
+});
+
   }
 })();
