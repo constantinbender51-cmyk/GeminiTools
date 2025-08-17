@@ -1,18 +1,25 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import 'dotenv/config';
+import express from 'express';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const app = express();
+const port = process.env.PORT || 3000;
 
+app.use(express.json());
+
+// ---------- tools ----------
 const tools = [
   {
     name: 'getTime',
     description: 'Return current UTC time as ISO string',
-    parameters: { type: 'object', properties: {}, required: [] }
+    parameters: { type: SchemaType.OBJECT, properties: {}, required: [] }
   },
   {
     name: 'sendNote',
     description: 'Push a message via ntfy.sh',
-    parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] }
+    parameters: { type: SchemaType.OBJECT, properties: { text: { type: SchemaType.STRING } }, required: ['text'] }
   }
 ];
 
@@ -21,26 +28,34 @@ const registry = {
   sendNote: async (text) => {
     await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC}`, {
       method: 'POST',
-      headers: { Title: 'Gemini' },
+      headers: { Title: 'Sentient-AI' },
       body: text
     });
   }
 };
 
-(async () => {
-  const prompt =
-    'Use getTime() once and then immediately use sendNote() with the exact string returned.';
+// ---------- route ----------
+app.post('/ask', async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).send('Missing prompt');
 
-  const chat = model.startChat({ tools: [{ functionDeclarations: tools }] });
-  const res = await chat.sendMessage(prompt);
+  try {
+    const chat = model.startChat({ tools: [{ functionDeclarations: tools }] });
+    const result = await chat.sendMessage(prompt);
 
-  for (const call of res.response.functionCalls() ?? []) {
-    if (registry[call.name]) {
-      const result = await registry[call.name](...Object.values(call.args));
-      if (call.name === 'getTime') {
-        // immediately send the result
-        await registry.sendNote(result);
+    for (const call of result.response.functionCalls() ?? []) {
+      if (registry[call.name]) {
+        await registry[call.name](...Object.values(call.args));
       }
     }
+
+    res.json({ reply: result.response.text() });
+  } catch (e) {
+    res.status(500).send(e.message);
   }
-})();
+});
+
+// ---------- health ----------
+app.get('/', (_req, res) => res.send('Sentient-AI alive 🚂'));
+
+app.listen(port, () => console.log(`Listening on ${port}`));
